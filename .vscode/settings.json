@@ -97,7 +97,9 @@
         "__tree": "cpp",
         "__tuple": "cpp",
         "__functional_03": "cpp",
-        "ciso646": "cpp"
+        "ciso646": "cpp",
+        "hash_map": "cpp",
+        "hash_set": "cpp"
     },
     "C_Cpp.default.compilerPath": "/home/u2021000884/miniconda3/bin/gcc",
     "C_Cpp.default.includePath": [

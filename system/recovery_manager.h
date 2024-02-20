@@ -22,6 +22,8 @@ class HeartBeatThread : public Thread {
   vector<Replica> get_node_replica(uint64_t dest_id);
   auto get_node_replica_new(uint64_t dest_id) -> vector<Replica>;
   RC generate_recovery_msg(uint64_t dest_id);
+  int tcp_ping(const char* ip);
+  int tcp_listen();
 
  protected:
   bool write_remote_heartbeat(uint64_t target_server);

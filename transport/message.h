@@ -45,7 +45,6 @@ class Message {
   static Message* create_message(RemReqType rtype);
   static std::vector<Message*>* create_messages(char* buf);
   static void release_message(Message* msg);
-  static auto GetTime() -> uint64_t;
   RemReqType rtype;
   uint64_t txn_id;
   uint64_t batch_id;

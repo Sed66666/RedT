@@ -9,6 +9,7 @@
 #include "message.h"
 #include "msg_queue.h"
 #include "msg_thread.h"
+#include "netinet/ip_icmp.h"
 #include "query.h"
 #include "rdma.h"
 #include "route_table.h"
@@ -16,12 +17,13 @@
 #include "transport.h"
 #include "work_queue.h"
 
-void HeartBeatThread::setup() {}
+void HeartBeatThread::setup() {
+  std::thread([&]() { tcp_listen(); }).detach();
+}
 
 RC HeartBeatThread::run() {
   tsetup();
   printf("Running HeartBeatThread %ld\n", _thd_id);
-  // heartbeat_loop();
   heartbeat_loop_new();
   return FINISH;
 }
@@ -103,10 +105,10 @@ RC HeartBeatThread::heartbeat_loop_new() {
     // send heartbeat
     if (now - lastsendtime > HEARTBEAT_TIME) {
       if (is_center_primary(g_node_id)) {
-        // leader send to other leaders
+        // center leaders send to other leaders
         send_tcp_heart_beat(false);
       } else {
-        // slaves send to their own leaders
+        // in a center, followers send to their own leader
         uint64_t center_id = GET_CENTER_ID(g_node_id);
         uint64_t dest_id = get_center_primary(center_id);
         send_rdma_heart_beat(dest_id);
@@ -132,6 +134,7 @@ RC HeartBeatThread::heartbeat_loop_new() {
         // summary statics
         while (msg = stats_queue.dequeue(get_thd_id())) {
           auto stats_msg = dynamic_cast<StatsCountMessage*>(msg);
+          PRINT_HEARTBEAT("\n");
           stats_msg->printAccessCount();
           stats_msg->printLatency();
           for (int i = 0; i < PART_CNT; i++) {
@@ -172,6 +175,7 @@ RC HeartBeatThread::heartbeat_loop_new() {
           remain_partitions.emplace(partition_idx, REPLICA_COUNT);
         }
 
+        // print score
         PRINT_HEARTBEAT("\nscore:\n");
         for (int i = 0; i < PART_CNT; i++) {
           for (int j = 0; j < CENTER_CNT; j++) {
@@ -264,8 +268,6 @@ RC HeartBeatThread::send_tcp_heart_beat(bool need_flush) {
     if (dest_id == -1) continue;
     auto message =
         Message::create_message(route_table.table, node_status.table, need_flush, HEART_BEAT);
-    message->latency = in_latency[i];
-    message->send_time = Message::GetTime();
     msg_queue.enqueue(get_thd_id(), message, dest_id);
     DEBUG_H("Node %ld send TCP heartbeat to %ld\n", g_node_id, dest_id);
   }
@@ -273,6 +275,18 @@ RC HeartBeatThread::send_tcp_heart_beat(bool need_flush) {
 }
 
 RC HeartBeatThread::send_stats() {
+  auto ips = tport_man.get_ip();
+  for (int i = 0; i < CENTER_CNT; i++) {
+    if (i != g_node_id) {
+      auto time = tcp_ping(ips[i]);
+      PRINT_HEARTBEAT("%d -> %d: %d ms\n", g_node_id, i, time);
+      if (time == 0) {
+        latency[i] = 1;
+      } else {
+        latency[i] = time;
+      }
+    }
+  }
   auto message = Message::create_message(access_count, latency, STATS_COUNT);
   if (g_node_id != 0) {
     msg_queue.enqueue(get_thd_id(), message, 0);
@@ -646,4 +660,84 @@ RC HeartBeatThread::generate_recovery_msg(uint64_t failed_id) {
           new_dest_id);
     }
   }
+}
+
+int HeartBeatThread::tcp_ping(const char* ip) {
+  int sock = 0;
+  struct sockaddr_in serv_addr;
+
+  sock = socket(AF_INET, SOCK_STREAM, 0);
+  if (sock < 0) {
+    std::cout << "Create socket error" << std::endl;
+    return -1;
+  }
+
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_port = htons(9876);
+
+  if (inet_pton(AF_INET, ip, &serv_addr.sin_addr) <= 0) {
+    std::cout << "Invalid ip address" << std::endl;
+    return -1;
+  }
+
+  auto start = std::chrono::high_resolution_clock::now();
+  if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+    std::cout << "Connect failed" << std::endl;
+    return -1;
+  }
+  auto stop = std::chrono::high_resolution_clock::now();
+
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+  auto time = duration.count();
+  // std::cout << "Connection time: " << time << " ms" << std::endl;
+
+  close(sock);
+  return time;
+}
+
+int HeartBeatThread::tcp_listen() {
+  int server_fd, new_socket;
+  struct sockaddr_in address;
+  int opt = 1;
+  int addrlen = sizeof(address);
+
+  if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+    perror("socket failed");
+    exit(EXIT_FAILURE);
+  }
+
+  if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+    perror("setsockopt");
+    exit(EXIT_FAILURE);
+  }
+  address.sin_family = AF_INET;
+  address.sin_addr.s_addr = INADDR_ANY;  // local address
+  address.sin_port = htons(9876);        // port
+
+  if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+    perror("bind failed");
+    exit(EXIT_FAILURE);
+  }
+  if (listen(server_fd, 3) < 0) {
+    perror("listen");
+    exit(EXIT_FAILURE);
+  }
+
+  while (true) {
+    std::cout << "Wait for connection..." << std::endl;
+    if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
+      perror("accept");
+      continue;
+    }
+
+    std::cout << "Connection established, close..." << std::endl;
+
+    close(new_socket);
+    std::cout << "Continue listening..." << std::endl;
+  }
+
+  close(new_socket);
+  close(server_fd);
+
+  return 0;
 }
