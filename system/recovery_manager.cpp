@@ -155,7 +155,9 @@ RC HeartBeatThread::heartbeat_loop_new() {
           int target_location;
           int score;
           auto operator<(const PartitionInformation& other) const -> bool {
-            return score < other.score;
+            // return score < other.score;
+            return score < other.score ||
+                   (score == other.score && target_location < other.target_location);
           }
         };
         set<PartitionInformation> next_partition;
@@ -216,10 +218,32 @@ RC HeartBeatThread::heartbeat_loop_new() {
         route_table.printRouteTable();
         node_status.printStatusTable();
         PRINT_HEARTBEAT("update local route table\n");
-        for (int partition_idx = 0; partition_idx < PART_CNT; partition_idx++) {
-          for (int replica_idx = 0; replica_idx < REPLICA_COUNT; replica_idx++) {
-            route_table.set_route_node_new(replica_idx, partition_idx,
-                                           plan[partition_idx][replica_idx]);
+
+        for (int partition_id = 0; partition_id < PART_CNT; partition_id++) {
+          unordered_map<int, int> old;  // {node_id, index}
+          for (int replica_index = 0; replica_index < REPLICA_COUNT; replica_index++) {
+            auto node_id = route_table.get_route_node_new(replica_index, partition_id).node_id;
+            old.emplace(node_id, replica_index);
+          }
+          for (int replica_index = 0; replica_index < REPLICA_COUNT; replica_index++) {
+            auto iterator = old.find(plan[partition_id][replica_index]);
+            if (iterator != old.end()) {
+              old.erase(iterator);
+              plan[partition_id][replica_index] = -2;
+            }
+          }
+
+          auto iterator = old.begin();
+          while (iterator != old.end()) {
+            for (int replica_index = 0; replica_index < REPLICA_COUNT; replica_index++) {
+              if (plan[partition_id][replica_index] != -2) {
+                route_table.set_route_node_new(iterator->second, partition_id,
+                                               plan[partition_id][replica_index]);
+                plan[partition_id][replica_index] = -2;
+                break;
+              }
+            }
+            iterator++;
           }
         }
         PRINT_HEARTBEAT("node 0 local route table and status:\n");
@@ -227,8 +251,8 @@ RC HeartBeatThread::heartbeat_loop_new() {
         node_status.printStatusTable();
         // send heartbeat containing route table
         send_tcp_heart_beat(true);
+        PRINT_HEARTBEAT("***collect finish\n\n");
       }
-      PRINT_HEARTBEAT("***collect finish\n\n");
     }
 
     if (is_center_primary(g_node_id)) {
@@ -663,6 +687,7 @@ RC HeartBeatThread::generate_recovery_msg(uint64_t failed_id) {
 }
 
 int HeartBeatThread::tcp_ping(const char* ip) {
+  PRINT_HEARTBEAT("call ping \n");
   int sock = 0;
   struct sockaddr_in serv_addr;
 
@@ -724,16 +749,16 @@ int HeartBeatThread::tcp_listen() {
   }
 
   while (true) {
-    std::cout << "Wait for connection..." << std::endl;
+    // std::cout << "Wait for connection..." << std::endl;
     if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
       perror("accept");
       continue;
     }
 
-    std::cout << "Connection established, close..." << std::endl;
+    // std::cout << "Connection established, close..." << std::endl;
 
     close(new_socket);
-    std::cout << "Continue listening..." << std::endl;
+    // std::cout << "Continue listening..." << std::endl;
   }
 
   close(new_socket);
