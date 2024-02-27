@@ -149,6 +149,26 @@ RC HeartBeatThread::heartbeat_loop_new() {
           }
         }
 
+        for (int i = 0; i < CENTER_CNT; i++) {
+          for (int j = 0; j < CENTER_CNT; j++) {
+            if (i == j) {
+              latency_collector[i][j] = 1;
+            } else if ((i == 0 && j == 1) || (i == 1 && j == 0)) {
+              latency_collector[i][j] = 10;
+            } else if ((i == 0 && j == 2) || (i == 2 && j == 0)) {
+              latency_collector[i][j] = 20;
+            } else if ((i == 0 && j == 3) || (i == 3 && j == 0)) {
+              latency_collector[i][j] = 30;
+            } else if ((i == 1 && j == 2) || (i == 2 && j == 1)) {
+              latency_collector[i][j] = 40;
+            } else if ((i == 1 && j == 3) || (i == 3 && j == 1)) {
+              latency_collector[i][j] = 50;
+            } else if ((i == 2 && j == 3) || (i == 3 && j == 2)) {
+              latency_collector[i][j] = 60;
+            }
+          }
+        }
+
         // calculate score and build set
         struct PartitionInformation {
           int partition_id;
@@ -214,10 +234,10 @@ RC HeartBeatThread::heartbeat_loop_new() {
         }
 
         // update local route table
-        PRINT_HEARTBEAT("\nlocal route table and status:\n");
+        PRINT_HEARTBEAT("\nold route table and status:\n");
         route_table.printRouteTable();
         node_status.printStatusTable();
-        PRINT_HEARTBEAT("update local route table\n");
+        PRINT_HEARTBEAT("\nupdate local route table...\n");
 
         for (int partition_id = 0; partition_id < PART_CNT; partition_id++) {
           unordered_map<int, int> old;  // {node_id, index}
@@ -246,7 +266,7 @@ RC HeartBeatThread::heartbeat_loop_new() {
             iterator++;
           }
         }
-        PRINT_HEARTBEAT("node 0 local route table and status:\n");
+        PRINT_HEARTBEAT("\nnew route table and status:\n");
         route_table.printRouteTable();
         node_status.printStatusTable();
         // send heartbeat containing route table

@@ -145,7 +145,7 @@
 #define COROUTINE_CNT 4
 #define CORE_CNT 2
 // PART_CNT should be at least NODE_CNT
-#define PART_CNT NODE_CNT
+#define PART_CNT 2*NODE_CNT
 #define CLIENT_NODE_CNT 1
 #define CLIENT_THREAD_CNT 4
 #define CLIENT_REM_THREAD_CNT 1
@@ -365,13 +365,13 @@
 #define INIT_PARALLELISM 1
 #define SYNTH_TABLE_SIZE 4194304
 #define ZIPF_THETA 0.2
-#define SIMILAR_GROUP_PERC 0.5
+#define SIMILAR_GROUP_PERC 0.95
 #define TXN_WRITE_PERC 1
 #define TUP_WRITE_PERC 0.5
 #define SCAN_PERC 0
 #define SCAN_LEN 20
-#define PART_PER_TXN 2
-#define DC_PER_TXN 2
+#define PART_PER_TXN 4
+#define DC_PER_TXN 4
 #define PERC_MULTI_PART MPR
 #define REQ_PER_QUERY 10
 #define FIELD_PER_TUPLE 10
