@@ -62,7 +62,7 @@ RC HeartBeatThread::heartbeat_loop() {
 
         PRINT_HEARTBEAT("\nheartbeat from node %d\n", hmsg->return_node_id);
         PRINT_HEARTBEAT("need_flush_route_ = %d\n", hmsg->need_flush_route_);
-        hmsg->heartbeatmsg.printRouteTable();
+        hmsg->heartbeatmsg.printRouteTableAndStatus();
         PRINT_HEARTBEAT("node %d local route table and status:\n", g_node_id);
         route_table.printRouteTable();
         for (int i = 0; i < NODE_CNT; i++) {
@@ -98,6 +98,7 @@ RC HeartBeatThread::heartbeat_loop_new() {
   uint64_t now;
   Message* msg;
   uint64_t last_collect_time = get_wall_clock();
+  bool once = true;
   while (!simulation->is_done()) {
     now = get_wall_clock();
     node_status.set_node_status(g_node_id, OnCall, get_thd_id());
@@ -117,12 +118,13 @@ RC HeartBeatThread::heartbeat_loop_new() {
     }
 
     // send statics
-    if (now - last_collect_time > COLLECT_TIME) {
+    if (once && now - last_collect_time > COLLECT_TIME) {
       send_stats();
       last_collect_time = get_wall_clock();
+      once = false;
       // node 0 receives statics message and generates plan
       if (g_node_id == 0) {
-        sleep(1);
+        sleep(3);
         PRINT_HEARTBEAT("\n***node 0 collect statics...\n");
         int access_collector[CENTER_CNT][PART_CNT];
         int latency_collector[CENTER_CNT][CENTER_CNT];
@@ -139,33 +141,13 @@ RC HeartBeatThread::heartbeat_loop_new() {
           stats_msg->printLatency();
           for (int i = 0; i < PART_CNT; i++) {
             access_collector[stats_msg->return_center_id][i] += stats_msg->access_count_[i];
-            PRINT_HEARTBEAT("access_collector[%d][%d]:%d\n", stats_msg->return_center_id, i,
-                            access_collector[stats_msg->return_center_id][i]);
+            // PRINT_HEARTBEAT("access_collector[%d][%d]:%d\n", stats_msg->return_center_id, i,
+            //                 access_collector[stats_msg->return_center_id][i]);
           }
           for (int i = 0; i < CENTER_CNT; i++) {
             latency_collector[stats_msg->return_center_id][i] = stats_msg->latency_[i];
-            PRINT_HEARTBEAT("latency_collector[%d][%d]:%d\n", stats_msg->return_center_id, i,
-                            latency_collector[stats_msg->return_center_id][i]);
-          }
-        }
-
-        for (int i = 0; i < CENTER_CNT; i++) {
-          for (int j = 0; j < CENTER_CNT; j++) {
-            if (i == j) {
-              latency_collector[i][j] = 1;
-            } else if ((i == 0 && j == 1) || (i == 1 && j == 0)) {
-              latency_collector[i][j] = 10;
-            } else if ((i == 0 && j == 2) || (i == 2 && j == 0)) {
-              latency_collector[i][j] = 20;
-            } else if ((i == 0 && j == 3) || (i == 3 && j == 0)) {
-              latency_collector[i][j] = 30;
-            } else if ((i == 1 && j == 2) || (i == 2 && j == 1)) {
-              latency_collector[i][j] = 40;
-            } else if ((i == 1 && j == 3) || (i == 3 && j == 1)) {
-              latency_collector[i][j] = 50;
-            } else if ((i == 2 && j == 3) || (i == 3 && j == 2)) {
-              latency_collector[i][j] = 60;
-            }
+            // PRINT_HEARTBEAT("latency_collector[%d][%d]:%d\n", stats_msg->return_center_id, i,
+            //                 latency_collector[stats_msg->return_center_id][i]);
           }
         }
 
@@ -282,7 +264,7 @@ RC HeartBeatThread::heartbeat_loop_new() {
 
         PRINT_HEARTBEAT("\nheartbeat from node %d\n", heartbeat_message->return_node_id);
         PRINT_HEARTBEAT("need_flush_route_ = %d\n", heartbeat_message->need_flush_route_);
-        heartbeat_message->heartbeatmsg.printRouteTable();
+        heartbeat_message->heartbeatmsg.printRouteTableAndStatus();
         PRINT_HEARTBEAT("node %d local route table and status:\n", g_node_id);
         route_table.printRouteTable();
         node_status.printStatusTable();
@@ -323,8 +305,9 @@ RC HeartBeatThread::send_stats() {
   for (int i = 0; i < CENTER_CNT; i++) {
     if (i != g_node_id) {
       auto time = tcp_ping(ips[i]);
-      PRINT_HEARTBEAT("%d -> %d: %d ms\n", g_node_id, i, time);
-      if (time == 0) {
+      PRINT_HEARTBEAT("center %d(%s) -> %d(%s): %d ms\n", g_node_id, ips[g_node_id], i, ips[i],
+                      time);
+      if (time <= 1) {
         latency[i] = 1;
       } else {
         latency[i] = time;
@@ -517,6 +500,7 @@ bool HeartBeatThread::is_global_primary(uint64_t nid) {
 }
 
 RC HeartBeatThread::update_node_and_route(RouteAndStatus result, uint64_t origin_dest) {
+#if REPLICA_COUNT == 0
   // node status
   PRINT_HEARTBEAT("call update_node_and_route\n");
   DEBUG_H("Node %ld recieve heart beat from %ld in other data center\n", g_node_id, origin_dest);
@@ -563,6 +547,7 @@ RC HeartBeatThread::update_node_and_route(RouteAndStatus result, uint64_t origin
               tmp_s2_rt.node_id);
     }
   }
+#endif
 }
 
 auto HeartBeatThread::update_node_and_route_new(RouteAndStatus result, uint64_t origin_dest) -> RC {
@@ -601,6 +586,7 @@ auto HeartBeatThread::update_node_and_route_new(RouteAndStatus result, uint64_t 
   }
 }
 
+#if REPLICA_COUNT == 0
 vector<Replica> HeartBeatThread::get_node_replica(uint64_t dest_id) {
   vector<Replica> replica_list;
   for (int i = 0; i < g_part_cnt; i++) {
@@ -624,7 +610,7 @@ vector<Replica> HeartBeatThread::get_node_replica(uint64_t dest_id) {
   }
   return replica_list;
 }
-
+#else
 auto HeartBeatThread::get_node_replica_new(uint64_t dest_id) -> vector<Replica> {
   vector<Replica> replica_list;
   for (int i = 0; i < g_part_cnt; i++) {
@@ -639,6 +625,7 @@ auto HeartBeatThread::get_node_replica_new(uint64_t dest_id) -> vector<Replica> 
   }
   return replica_list;
 }
+#endif
 
 uint64_t HeartBeatThread::caculate_suitable_node(Replica rep, uint64_t failed_id) {
   /* ------Check the same data center of failed node------- */
@@ -672,6 +659,7 @@ uint64_t HeartBeatThread::caculate_suitable_node(Replica rep, uint64_t failed_id
 }
 
 RC HeartBeatThread::generate_recovery_msg(uint64_t failed_id) {
+#if REPLICA_COUNT == 0
   vector<Replica> replica_list = get_node_replica(failed_id);
   for (int i = 0; i < replica_list.size(); i++) {
     Replica rep = replica_list[i];
@@ -704,6 +692,7 @@ RC HeartBeatThread::generate_recovery_msg(uint64_t failed_id) {
           new_dest_id);
     }
   }
+#endif
 }
 
 int HeartBeatThread::tcp_ping(const char* ip) {

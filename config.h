@@ -73,6 +73,8 @@
 #define USE_REPLICA true
 #if USE_REPLICA
 #define REPLICA_COUNT 3  // !0默认采用写死的3副本机制，目前TPCC只能采用写死的3副本机制
+#define MINOR_REPLICA \
+  2  // 返回需要（1-1/x）的副本，如果x是2，则代表只要多余一半的副本返回就可以提交
 #else
 #define REPLICA_COUNT 0  // !0默认采用写死的3副本机制，目前TPCC只能采用写死的3副本机制
 #endif
@@ -137,16 +139,16 @@
 /***********************************************/
 // Simulation + Hardware
 /***********************************************/
-#define CENTER_CNT 4
-#define NODE_CNT 4
-#define THREAD_CNT 40
+#define CENTER_CNT 6
+#define NODE_CNT 6
+#define THREAD_CNT 12
 #define REM_THREAD_CNT 1
 #define SEND_THREAD_CNT 1
 #define COROUTINE_CNT 4
 #define CORE_CNT 2
 // PART_CNT should be at least NODE_CNT
 #define PART_CNT 2*NODE_CNT
-#define CLIENT_NODE_CNT 1
+#define CLIENT_NODE_CNT 6
 #define CLIENT_THREAD_CNT 4
 #define CLIENT_REM_THREAD_CNT 1
 #define CLIENT_SEND_THREAD_CNT 1
@@ -180,7 +182,7 @@
 #define TIME_ENABLE true  // STATS_ENABLE
 
 #define FIN_BY_TIME true
-#define MAX_TXN_IN_FLIGHT 320
+#define MAX_TXN_IN_FLIGHT 720
 
 #define SERVER_GENERATE_QUERIES false
 
@@ -363,15 +365,15 @@
 #define DATA_PERC 100
 #define ACCESS_PERC 0.03
 #define INIT_PARALLELISM 1
-#define SYNTH_TABLE_SIZE 4194304
+#define SYNTH_TABLE_SIZE 6291456
 #define ZIPF_THETA 0.2
 #define SIMILAR_GROUP_PERC 0.95
 #define TXN_WRITE_PERC 1
 #define TUP_WRITE_PERC 0.5
 #define SCAN_PERC 0
 #define SCAN_LEN 20
-#define PART_PER_TXN 4
-#define DC_PER_TXN 4
+#define PART_PER_TXN 3
+#define DC_PER_TXN 3
 #define PERC_MULTI_PART MPR
 #define REQ_PER_QUERY 10
 #define FIELD_PER_TUPLE 10
@@ -597,8 +599,8 @@ enum PPSTxnType {
 #define PROG_TIMER 10 * BILLION // in s
 #define BATCH_TIMER 0
 #define SEQ_BATCH_TIMER 5 * 1 * MILLION // ~5ms -- same as CALVIN paper
-#define DONE_TIMER 1 * 20 * BILLION // ~1 minutes
-#define WARMUP_TIMER 1 * 10 * BILLION // ~1 minutes
+#define DONE_TIMER 1 * 40 * BILLION // ~1 minutes
+#define WARMUP_TIMER 1 * 20 * BILLION // ~1 minutes
 
 #define SEED 0
 #define SHMEM_ENV false
@@ -607,7 +609,7 @@ enum PPSTxnType {
 #define RDMA_CALLS_TIMEOUT 1 * 1000000
 #define MESSAGE_SEND_RETRY_TIME 10 * MILLION
 #define HEARTBEAT_TIME BILLION     // 1 second
-#define COLLECT_TIME 15 * BILLION  // 5 seconds
+#define COLLECT_TIME 15 * BILLION  // 15 seconds
 #define SAME_CENTER_FAILED_TIME 5 * HEARTBEAT_TIME
 #define INTER_CENTER_FAILED_TIME 20 * HEARTBEAT_TIME
 #define EXECUTOR_FAILED_TIME 1 * INTER_CENTER_FAILED_TIME

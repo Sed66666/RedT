@@ -46,6 +46,7 @@ RC RecoveryThread::run() {
 }
 
 RC RecoveryThread::secondary_recovery(uint64_t partition_id, uint64_t sid) {
+    #if REPLICA_COUNT == 0
     route_node_ts primary = route_table.get_primary(partition_id);
     uint64_t primary_id = primary.node_id;
     DEBUG_H("Route recover part %ld secondary\n", partition_id);
@@ -69,9 +70,13 @@ RC RecoveryThread::secondary_recovery(uint64_t partition_id, uint64_t sid) {
     } else {
         return Abort;
     }
+    #else 
+    return RCOK;
+    #endif
 }
 
 RC RecoveryThread::primary_recovery(uint64_t partition_id) {
+    #if REPLICA_COUNT == 0
     DEBUG_H("Route recover part %ld primary\n", partition_id);
     route_node_ts primary = route_table.get_primary(partition_id);
     uint64_t primary_id = primary.node_id;
@@ -109,6 +114,10 @@ RC RecoveryThread::primary_recovery(uint64_t partition_id) {
     } else {
         return Abort;
     }
+    #else
+        return RCOK;
+    #endif
+    
 }
 
 RC RecoveryThread::send_rdma_heart_beat(uint64_t dest_id) {
@@ -117,6 +126,7 @@ RC RecoveryThread::send_rdma_heart_beat(uint64_t dest_id) {
 }
 
 uint64_t RecoveryThread::caculate_new_secondary(uint64_t partition_id, uint64_t s_id) {
+    #if REPLICA_COUNT == 0
     route_node_ts primary = route_table.get_primary(partition_id);
     uint64_t primary_id = primary.node_id;
     uint64_t sid1 = route_table.get_secondary_1(partition_id).node_id;
@@ -158,7 +168,9 @@ uint64_t RecoveryThread::caculate_new_secondary(uint64_t partition_id, uint64_t 
     }
     if (suitable_node != -1) return suitable_node;
     else assert(false);
+    #endif
 }
+
 RC RecoveryThread::log_update_from_replica(uint64_t partition_id, uint64_t replica_id) {
     return RCOK;
 }

@@ -487,14 +487,14 @@ def ycsb_scaling_abort():
 
 def ycsb_cross_dc():
     wl = 'YCSB'
-    nnodes = [4]
-    dcs = [4]
+    nnodes = [6]
+    dcs = [6]
     algos=['RDMA_NO_WAIT3']
     base_table_size=1048576
     txn_write_perc = [1]
     tup_write_perc = [0.5]
-    load = [320]
-    tcnt = [40]  #THREAD_CNT
+    load = [720]
+    tcnt = [12]  #THREAD_CNT
     skew = [0.2]
     cross_dc_perc = [1.0] 
     # cross_dc_perc = [0] 
@@ -1323,7 +1323,7 @@ configs = {
     "REPLICA_TYPE": "AP",
     "REM_THREAD_CNT": 1,
     "SEND_THREAD_CNT": 1,
-    "CLIENT_NODE_CNT" : 1,
+    "CLIENT_NODE_CNT" : 6,
     "CLIENT_THREAD_CNT" : 4,
     "CLIENT_REM_THREAD_CNT" : 1,
     "CLIENT_SEND_THREAD_CNT" : 1,
@@ -1334,13 +1334,13 @@ configs = {
     "TPORT_TYPE":"IPC",
     "TPORT_PORT":"18000",
     "PART_CNT": "2*NODE_CNT",
-    "PART_PER_TXN": 4,
-    "DC_PER_TXN": 4,
+    "PART_PER_TXN": 3,
+    "DC_PER_TXN": 3,
     "MAX_TXN_IN_FLIGHT": 10000,
     "NETWORK_DELAY": '10000UL',
     "NETWORK_DELAY_TEST": 'false',
-    "DONE_TIMER": "1 * 20 * BILLION // ~1 minutes",
-    "WARMUP_TIMER": "1 * 10 * BILLION // ~1 minutes",
+    "DONE_TIMER": "1 * 40 * BILLION // ~1 minutes",
+    "WARMUP_TIMER": "1 * 20 * BILLION // ~1 minutes",
     "SEQ_BATCH_TIMER": "5 * 1 * MILLION // ~5ms -- same as CALVIN paper",
     "BATCH_TIMER" : "0",
     "PROG_TIMER" : "10 * BILLION // in s",

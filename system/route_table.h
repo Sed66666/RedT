@@ -14,12 +14,14 @@ struct route_node_ts {
 struct route_table_node {
  public:
   uint64_t partition_id;
+  #if REPLICA_COUNT != 0
+  route_node_ts new_secondary[MAX_REPLICA_COUNT];
+  uint64_t replica_cnt;
+  #else 
   route_node_ts primary;
   route_node_ts secondary_1;
   route_node_ts secondary_2;
-
-  route_node_ts new_secondary[MAX_REPLICA_COUNT];
-  uint64_t replica_cnt;
+  #endif
 };
 class RouteTable {
  public:
@@ -46,9 +48,10 @@ class RouteTable {
 
   void printRouteTable() {
     for (int i = 0; i < PART_CNT; i++) {
-      PRINT_HEARTBEAT("partition %d: primary %d, secondary1 %d, secondary2 %d\n", i,
-                      table[i].new_secondary[0].node_id, table[i].new_secondary[1].node_id,
-                      table[i].new_secondary[2].node_id);
+      for (int j = 0; j < REPLICA_COUNT; j++) {
+        PRINT_HEARTBEAT("p%d.r%d.%d  ", i, j, table[i].new_secondary[j].node_id);
+      }
+      PRINT_HEARTBEAT("\n");
     }
   }
 };
@@ -77,14 +80,15 @@ class RouteAndStatus {
  public:
   status_node* _status;
   route_table_node* _route;
-  void printRouteTable() {
+  void printRouteTableAndStatus() {
     for (int i = 0; i < PART_CNT; i++) {
-      PRINT_HEARTBEAT("partition %d: primary %d, secondary1 %d, secondary2 %d\n", i,
-                      _route[i].new_secondary[0].node_id, _route[i].new_secondary[1].node_id,
-                      _route[i].new_secondary[2].node_id);
+      for (int j = 0; j < REPLICA_COUNT; j++) {
+        PRINT_HEARTBEAT("p%d.r%d.%d  ", i, j, _route[i].new_secondary[j].node_id);
+      }
+      PRINT_HEARTBEAT("\n");
     }
     for (int i = 0; i < NODE_CNT; i++) {
-      PRINT_HEARTBEAT("node status %d: last_ts %lu, status %d\n", i, _status[i].last_ts,
+      PRINT_HEARTBEAT("node %d last_ts: %lu, status %d\n", i, _status[i].last_ts,
                       _status[i].status);
     }
   }
@@ -145,6 +149,7 @@ inline uint64_t get_global_primary(uint64_t center_id) {
   }
 }
 
+#if REPLICA_COUNT == 0
 inline uint64_t get_primary_node_id(uint64_t part_id) {
   uint64_t node_id = route_table.get_primary(part_id).node_id;
   status_node* st = node_status.get_node_status(node_id);
@@ -163,6 +168,7 @@ inline uint64_t get_follower2_node_id(uint64_t part_id) {
   if (st->status == NS::Failure) return -1;
   return node_id;
 }
+#else
 
 inline auto get_node_id_new(int index, uint64_t part_id) -> uint64_t {
   uint64_t node_id = route_table.get_route_node_new(index, part_id).node_id;
@@ -175,6 +181,7 @@ inline auto get_part_repl_cnt(uint64_t part_id) -> uint64_t {
   route_table_node node_id = route_table.get_route_table_node(part_id);
   return node_id.replica_cnt;
 }
+#endif
 // #define IS_CENTER_PRIMARY(nid) ((nid / g_center_cnt) == 0)
 // ! Recovery manager section end
 

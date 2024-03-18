@@ -93,9 +93,15 @@ void YCSBQuery::reset() {
 void YCSBQuery::reset_query_status() {
   for (int i = 0; i < requests.size(); i++) {
     ycsb_request* req = requests[i];
+    #if REPLICA_COUNT != 0
+    for (int j = 0; j < MAX_REPLICA_COUNT; j++) {
+      req->replica_node[j].status = OpStatus::RUN;
+    }
+    #else 
     req->primary.status = OpStatus::RUN;
     req->second1.status = OpStatus::RUN;
     req->second2.status = OpStatus::RUN;
+    #endif
   }
 }
 
@@ -422,9 +428,15 @@ BaseQuery* YCSBQueryGenerator::gen_requests_zipf(uint64_t home_partition_id, Wor
       i--;
       continue;
     }
+    #if REPLICA_COUNT != 0
+    for (int j = 0; j < MAX_REPLICA_COUNT; j++) {
+      req->replica_node[j].status = OpStatus::RUN;
+    }
+    #else 
     req->primary.status = OpStatus::RUN;
     req->second1.status = OpStatus::RUN;
     req->second2.status = OpStatus::RUN;
+    #endif
     partitions_accessed.insert(partition_id);
     dcs_accessed.insert(dc_id);
     rid++;
@@ -487,23 +499,39 @@ BaseQuery* YCSBQueryGenerator::gen_requests_zipf_new(uint64_t home_partition_id,
     uint64_t partition_id;
     uint64_t dc_id;
 
-    if ((FIRST_PART_LOCAL && rid == 0) || g_node_cnt == 1) {
-      partition_id = home_partition_id;
-      dc_id = GET_CENTER_ID(GET_NODE_ID(partition_id));
-    } else {
-      auto random = mrand->next() % 100;
-      if (random < g_similar_group_perc * 100) {
-        // same group
-        partition_id =
-            home_partition_id * (PART_CNT / CENTER_CNT) + mrand->next() % (PART_CNT / CENTER_CNT);
-      } else {
-        // other group
-        partition_id = mrand->next() % (PART_CNT - PART_CNT / CENTER_CNT);
-        if (partition_id >= home_partition_id * (PART_CNT / CENTER_CNT)) {
-          partition_id += (PART_CNT / CENTER_CNT);
-        }
-      }
-    }
+    // if ((FIRST_PART_LOCAL && rid == 0) || g_node_cnt == 1) {
+    //   partition_id = home_partition_id;
+    //   dc_id = GET_CENTER_ID(GET_NODE_ID(partition_id));
+    // } else {
+
+    // auto random = rand() % 100;
+    // if (random < g_similar_group_perc * 100) {
+    //   // same group
+    //   partition_id = home_partition_id * (PART_CNT / CENTER_CNT) + rand() % (PART_CNT /
+    //   CENTER_CNT);
+    // } else {
+    //   // other group
+    //   partition_id = rand() % (PART_CNT - PART_CNT / CENTER_CNT);
+    //   if (partition_id >= home_partition_id * (PART_CNT / CENTER_CNT)) {
+    //     partition_id += (PART_CNT / CENTER_CNT);
+    //   }
+    // }
+
+    partition_id = home_partition_id * (PART_CNT / CENTER_CNT) + rand() % (PART_CNT / CENTER_CNT);
+
+    // partition_id = rand() % 12;
+    // if (random < g_similar_group_perc * 100) {
+    //   // same group
+    //   if (home_partition_id % 2 == 0) {
+    //     partition_id = home_partition_id + 1 + rand() % 2;
+    //   } else {
+    //     partition_id = (home_partition_id + 6 + rand() % 2) % 12;
+    //   }
+    // } else {
+    //   // other group
+    //   partition_id = rand() % 12;
+    // }
+    // }
     ycsb_request* req = (ycsb_request*)mem_allocator.alloc(sizeof(ycsb_request));
     if (r_twr < g_txn_read_perc || r < g_tup_read_perc)
       req->acctype = RD;
@@ -525,9 +553,16 @@ BaseQuery* YCSBQueryGenerator::gen_requests_zipf_new(uint64_t home_partition_id,
       i--;
       continue;
     }
+
+    #if REPLICA_COUNT != 0
+    for (int j = 0; j < MAX_REPLICA_COUNT; j++) {
+      req->replica_node[j].status = OpStatus::RUN;
+    }
+    #else 
     req->primary.status = OpStatus::RUN;
     req->second1.status = OpStatus::RUN;
     req->second2.status = OpStatus::RUN;
+    #endif
     partitions_accessed.insert(partition_id);
     dcs_accessed.insert(dc_id);
     rid++;
