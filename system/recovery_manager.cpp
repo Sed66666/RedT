@@ -98,7 +98,7 @@ RC HeartBeatThread::heartbeat_loop_new() {
   uint64_t now;
   Message* msg;
   uint64_t last_collect_time = get_wall_clock();
-  bool once = true;
+  bool once = false;
   while (!simulation->is_done()) {
     now = get_wall_clock();
     node_status.set_node_status(g_node_id, OnCall, get_thd_id());
@@ -157,9 +157,10 @@ RC HeartBeatThread::heartbeat_loop_new() {
           int target_location;
           int score;
           auto operator<(const PartitionInformation& other) const -> bool {
-            // return score < other.score;
-            return score < other.score ||
-                   (score == other.score && target_location < other.target_location);
+            return partition_id < other.partition_id ||
+                   (partition_id == other.partition_id && score < other.score) ||
+                   (partition_id == other.partition_id && score == other.score &&
+                    target_location > other.target_location);
           }
         };
         set<PartitionInformation> next_partition;

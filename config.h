@@ -72,9 +72,9 @@
 #define PARAL_SUBTXN true   // hg-network without replica stage 3
 #define USE_REPLICA true
 #if USE_REPLICA
-#define REPLICA_COUNT 3  // !0默认采用写死的3副本机制，目前TPCC只能采用写死的3副本机制
+#define REPLICA_COUNT 5  // !0默认采用写死的3副本机制，目前TPCC只能采用写死的3副本机制
 #define MINOR_REPLICA \
-  2  // 返回需要（1-1/x）的副本，如果x是2，则代表只要多余一半的副本返回就可以提交
+  4  // 返回需要（1-1/x）的副本，如果x是2，则代表只要多余一半的副本返回就可以提交
 #else
 #define REPLICA_COUNT 0  // !0默认采用写死的3副本机制，目前TPCC只能采用写死的3副本机制
 #endif
@@ -139,8 +139,8 @@
 /***********************************************/
 // Simulation + Hardware
 /***********************************************/
-#define CENTER_CNT 6
-#define NODE_CNT 6
+#define CENTER_CNT 8
+#define NODE_CNT 8
 #define THREAD_CNT 12
 #define REM_THREAD_CNT 1
 #define SEND_THREAD_CNT 1
@@ -148,7 +148,7 @@
 #define CORE_CNT 2
 // PART_CNT should be at least NODE_CNT
 #define PART_CNT 2*NODE_CNT
-#define CLIENT_NODE_CNT 6
+#define CLIENT_NODE_CNT 8
 #define CLIENT_THREAD_CNT 4
 #define CLIENT_REM_THREAD_CNT 1
 #define CLIENT_SEND_THREAD_CNT 1
@@ -365,9 +365,9 @@
 #define DATA_PERC 100
 #define ACCESS_PERC 0.03
 #define INIT_PARALLELISM 1
-#define SYNTH_TABLE_SIZE 6291456
+#define SYNTH_TABLE_SIZE 4194304
 #define ZIPF_THETA 0.2
-#define SIMILAR_GROUP_PERC 0.95
+#define SIMILAR_GROUP_PERC 0
 #define TXN_WRITE_PERC 1
 #define TUP_WRITE_PERC 0.5
 #define SCAN_PERC 0

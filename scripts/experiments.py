@@ -487,10 +487,11 @@ def ycsb_scaling_abort():
 
 def ycsb_cross_dc():
     wl = 'YCSB'
-    nnodes = [6]
-    dcs = [6]
+    nnodes = [8]
+    dcs = [8]
     algos=['RDMA_NO_WAIT3']
-    base_table_size=1048576
+    # base_table_size=1048576
+    base_table_size=524288
     txn_write_perc = [1]
     tup_write_perc = [0.5]
     load = [720]
@@ -1323,7 +1324,7 @@ configs = {
     "REPLICA_TYPE": "AP",
     "REM_THREAD_CNT": 1,
     "SEND_THREAD_CNT": 1,
-    "CLIENT_NODE_CNT" : 6,
+    "CLIENT_NODE_CNT" : 8,
     "CLIENT_THREAD_CNT" : 4,
     "CLIENT_REM_THREAD_CNT" : 1,
     "CLIENT_SEND_THREAD_CNT" : 1,
